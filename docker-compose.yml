@@ -2,33 +2,36 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:13
+    image: postgres:14-alpine
+    container_name: postgres_db
     environment:
+      POSTGRES_DB: fraud_detection
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: fraud_detection
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
-  airbyte-worker:
-    image: airbyte/worker
-    environment:
-      AIRBYTE_CONFIG_DIR: /tmp/airbyte_config
-    ports:
-      - "8000:8000"
-    depends_on:
-      - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d fraud_detection"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   airflow-webserver:
-    image: apache/airflow:2.7.2
+    image: apache/airflow:2.8.1
+    container_name: airflow_webserver
+    restart: always
     environment:
       AIRFLOW_HOME: /opt/airflow
-      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
-      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://user:password@postgres:5432/fraud_detection
-      AIRFLOW__WEBSERVER__WEB_SERVER_PORT: "8080"
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__CORE__FERNET_KEY: _a-random-fernet-key-for-airflow-security_
+      AIRFLOW__WEBSERVER__RBAC: 'true'
+      AIRFLOW__WEBSERVER__AUTHENTICATE: 'true'
+      AIRFLOW__WEBSERVER__AUTH_BACKEND: 'airflow.www.security:AirflowSecurityManager'
+      AIRFLOW__WEBSERVER__AUTH_USER_REGISTRATION: 'true'
+      AIRFLOW__WEBSERVER__AUTH_USER_REGISTRATION_ROLE: 'Admin'
     ports:
       - "8080:8080"
     volumes:
@@ -36,25 +39,68 @@ services:
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    command: webserver
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  airflow-scheduler:
+    image: apache/airflow:2.8.1
+    container_name: airflow_scheduler
+    restart: always
+    environment:
+      AIRFLOW_HOME: /opt/airflow
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://user:password@postgres:5432/fraud_detection
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__CORE__FERNET_KEY: _a-random-fernet-key-for-airflow-security_
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    depends_on:
+      airflow-webserver:
+        condition: service_healthy
+    command: scheduler
 
   dbt:
-    image: ghcr.io/dbt-labs/dbt-postgres:1.7.0
+    image: ghcr.io/dbt-labs/dbt-postgres:1.9.0
+    container_name: dbt_cli
+    volumes:
+      - ./fraud_detection_project:/usr/app/dbt
+      - ~/.dbt:/root/.dbt
     environment:
-      DBT_PROFILES_DIR: /usr/app/dbt
-    volumes:
-      - ./dbt:/usr/app/dbt
+      DBT_PROFILES_DIR: /root/.dbt
+    command: bash -c "dbt debug && dbt run"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
-  soda:
-    image: sodadata/soda-core
-    volumes:
-      - ./soda:/app/soda
-    depends_on:
-      - postgres
+  # airbyte:
+  #   image: airbyte/local-connector-builder-server
+  #   container_name: airbyte_server
+  #   ports:
+  #     - "8000:8000"
+  #   # volumes:
+  #   #   - ./airbyte_config:/airbyte/config
+  #   #   - ./airbyte_data:/airbyte/data
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+  # soda:
+  #   image: sodadata/soda-core:latest
+  #   container_name: soda_core
+  #   volumes:
+  #     - ./soda_config:/app/config
+  #     - ./soda_checks:/app/checks
+  #   command: bash -c "soda scan -d fraud_detection -c /app/config/configuration.yml /app/checks/checks.yml"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
 
 volumes:
   postgres_data:
-
-
