@@ -1,0 +1,72 @@
+version: 2
+
+sources:
+  - name: public
+    description: Raw data from various sources
+    tables:
+      - name: raw_transactions
+        description: Raw credit card transactions data
+        columns:
+          - name: time_seconds
+            description: Time in seconds from first transaction
+          - name: v1
+            description: PCA component 1
+          - name: v2
+            description: PCA component 2
+          - name: v3
+            description: PCA component 3
+          - name: v4
+            description: PCA component 4 (important for fraud detection)
+          - name: v5
+            description: PCA component 5
+          - name: v6
+            description: PCA component 6
+          - name: v7
+            description: PCA component 7
+          - name: v8
+            description: PCA component 8
+          - name: v9
+            description: PCA component 9
+          - name: v10
+            description: PCA component 10
+          - name: v11
+            description: PCA component 11 (important for fraud detection)
+          - name: v12
+            description: PCA component 12
+          - name: v13
+            description: PCA component 13
+          - name: v14
+            description: PCA component 14 (important for fraud detection)
+          - name: v15
+            description: PCA component 15
+          - name: v16
+            description: PCA component 16
+          - name: v17
+            description: PCA component 17
+          - name: v18
+            description: PCA component 18
+          - name: v19
+            description: PCA component 19
+          - name: v20
+            description: PCA component 20
+          - name: v21
+            description: PCA component 21
+          - name: v22
+            description: PCA component 22
+          - name: v23
+            description: PCA component 23
+          - name: v24
+            description: PCA component 24
+          - name: v25
+            description: PCA component 25
+          - name: v26
+            description: PCA component 26
+          - name: v27
+            description: PCA component 27
+          - name: v28
+            description: PCA component 28
+          - name: amount
+            description: Transaction amount
+          - name: class
+            description: Class label (0=legitimate, 1=fraud)
+
