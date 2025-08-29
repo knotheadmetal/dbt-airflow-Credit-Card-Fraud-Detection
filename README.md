@@ -1,4 +1,4 @@
-# Pipeline de Detecção de Fraude com Arquitetura Open Source
+# Pipeline de Detecção de Fraude com Arquitetura Open Source 
 
 ## Visão Geral do Projeto
 
